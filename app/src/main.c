@@ -6,12 +6,14 @@
 #include <zephyr/sys/printk.h>
 
 #include "ethernet.h"
+#include "web_server.h"
 
 #define SLEEP_TIME_MS 500
 
 int main(void)
 {
 	ethernet_service_init();
+	web_server_service_init();
 
 	while (1) {
 		k_msleep(SLEEP_TIME_MS);

@@ -45,3 +45,32 @@ uart:~$ net ping -c 4 192.168.1.1
 Four echo replies confirm that the PHY link, Ethernet driver, IPv4/ARP stack,
 and outbound/return network path are operating. The gateway address depends on
 the connected LAN and must not be hard-coded in the firmware.
+
+## HTTP GET and POST
+
+The application starts an HTTP server on TCP port 80. Replace `<board-ip>`
+with the IPv4 address printed after DHCP completes.
+
+Read application status and uptime with GET:
+
+```bash
+curl http://<board-ip>/api/status
+```
+
+Example response:
+
+```json
+{"status":"ok","uptime_ms":12345}
+```
+
+Send a request body and receive it back with POST:
+
+```bash
+curl -X POST \
+  -H 'Content-Type: text/plain' \
+  --data 'hello from the host' \
+  http://<board-ip>/api/echo
+```
+
+The HTTP service accepts one concurrent client. It is an unencrypted
+development interface; do not expose it directly to an untrusted network.
