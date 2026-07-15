@@ -1,6 +1,14 @@
 # Prerequisites
 *.d
 
+# Zephyr build and local environment
+build/
+build-*/
+.cache/
+.venv/
+twister-out*/
+.twister/
+
 # Object files
 *.o
 *.ko
