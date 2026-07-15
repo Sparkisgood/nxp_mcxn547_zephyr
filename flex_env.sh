@@ -5,7 +5,7 @@
 
 CWD="$PWD"
 ZEPHYR_WORKSPACE="${ZEPHYR_WORKSPACE:-$HOME/Music/rtos/zephyr}"
-ZEPHYR_USER_CACHE="${ZEPHYR_USER_CACHE:-$CWD/.cache/zephyr}"
+export XDG_CACHE_HOME="${XDG_CACHE_HOME:-$CWD/.cache}"
 
 source "$ZEPHYR_WORKSPACE/.venv/bin/activate"
 source "$ZEPHYR_WORKSPACE/zephyr/zephyr-env.sh"
@@ -16,11 +16,10 @@ flex_build_n947() {
 }
 
 flex_build_n547() {
-  west build -p always \
+  west build -p always --sysbuild \
     -b mcx_n5xx_evk/mcxn547/cpu0 \
     -s "$CWD/app" \
-    -d "$CWD/build/app" \
-    -- -DUSER_CACHE_DIR="$ZEPHYR_USER_CACHE"
+    -d "$CWD/build/app"
 }
 
 flex_clean_build() {
@@ -34,5 +33,3 @@ flex_flash_image() {
 cbb() {
   cd "$CWD" || return
 }
-
-
