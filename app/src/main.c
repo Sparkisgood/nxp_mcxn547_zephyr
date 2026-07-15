@@ -6,6 +6,8 @@
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/sys/printk.h>
 
+#include "ethernet.h"
+
 #define SLEEP_TIME_MS 500
 #define LED0_NODE DT_ALIAS(led0)
 
@@ -27,7 +29,10 @@ int main(void)
 		return 0;
 	}
 
+	ethernet_service_init();
+
 	while (1) {
+		#if 0
 		ret = gpio_pin_toggle_dt(&led);
 		if (ret < 0) {
 			printk("Error: failed to toggle LED pin (%d)\n", ret);
@@ -36,6 +41,7 @@ int main(void)
 
 		led_on = !led_on;
 		printk("Hiblinky: LED is %s\n", led_on ? "ON" : "OFF");
+		#endif
 		k_msleep(SLEEP_TIME_MS);
 	}
 
