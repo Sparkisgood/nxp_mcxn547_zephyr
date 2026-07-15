@@ -1,0 +1,12 @@
+mainmenu "Edison application"
+
+source "Kconfig.zephyr"
+
+config APP_PSRAM
+	bool "Edison FlexSPI Port B1 PSRAM"
+	default y
+	depends on MEMC
+	select MEMC_MCUX_FLEXSPI
+	help
+	  Enable the application PSRAM driver and the underlying MCUX FlexSPI
+	  memory-controller driver.

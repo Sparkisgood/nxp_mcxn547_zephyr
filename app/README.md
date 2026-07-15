@@ -81,3 +81,25 @@ curl -X POST \
 
 The HTTP service accepts one concurrent client. It is an unencrypted
 development interface; do not expose it directly to an untrusted network.
+
+## PSRAM
+
+The Edison hardware's 8 MiB PSRAM is configured on FlexSPI0 Port B1. The
+implementation uses the same `0x9f` ID, `0xeb` quad-read, and `0x38`
+quad-write command sequences as the reference `flex_spi.c`.
+
+Use the UART shell to inspect the device and run a small read/write test:
+
+```text
+uart:~$ psram info
+uart:~$ psram test
+uart:~$ psram test 0x5a 0x1000 256
+```
+
+The stress command writes an incrementing pattern, reads it back, and compares
+it in 1 KiB blocks. Its arguments are `[length] [offset]`; both the normal and
+stress tests overwrite the selected PSRAM range.
+
+```text
+uart:~$ psram stress 65536 0
+```

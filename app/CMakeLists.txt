@@ -6,8 +6,13 @@ project(edison)
 target_sources(app PRIVATE
     src/main.c
     src/ethernet.c
+    src/psram.c
     src/web_server.c
 )
+
+# The MCUX FlexSPI controller API is currently internal to Zephyr's memc
+# driver. Keep this dependency local to the PSRAM module.
+target_include_directories(app PRIVATE ${ZEPHYR_BASE}/drivers/memc)
 
 zephyr_linker_sources(SECTIONS sections-rom.ld)
 zephyr_linker_section(NAME http_resource_desc_edison_http_service

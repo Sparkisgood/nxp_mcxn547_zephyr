@@ -1,0 +1,38 @@
+/*
+ * The Edison hardware connects its 8 MiB PSRAM to FlexSPI0 Port B1:
+ * PIO2_2 is CS, PIO2_3 is CLK, and PIO2_4..7 are DATA0..3.
+ */
+&pinctrl {
+	pinmux_flexspi_flash_psram: pinmux_flexspi_flash_psram {
+		group0 {
+			pinmux = <FLEXSPI0_A_SS0_b_PIO3_0>,
+				 <FLEXSPI0_A_SCLK_PIO3_7>,
+				 <FLEXSPI0_A_DATA0_PIO3_8>,
+				 <FLEXSPI0_A_DATA1_PIO3_9>,
+				 <FLEXSPI0_B_SS0_b_PIO2_2>,
+				 <FLEXSPI0_B_SCLK_PIO2_3>,
+				 <FLEXSPI0_B_DATA0_PIO2_4>,
+				 <FLEXSPI0_B_DATA1_PIO2_5>;
+			input-enable;
+			slew-rate = "fast";
+			drive-strength = "low";
+		};
+
+		group1 {
+			pinmux = <FLEXSPI0_A_DATA2_PIO3_10>,
+				 <FLEXSPI0_A_DATA3_PIO3_11>,
+				 <FLEXSPI0_B_DATA2_PIO2_6>,
+				 <FLEXSPI0_B_DATA3_PIO2_7>;
+			input-enable;
+			slew-rate = "fast";
+			drive-strength = "low";
+			bias-pull-up;
+		};
+	};
+};
+
+&flexspi {
+	status = "okay";
+	pinctrl-0 = <&pinmux_flexspi_flash_psram>;
+	pinctrl-names = "default";
+};

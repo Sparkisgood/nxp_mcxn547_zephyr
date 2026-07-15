@@ -8,6 +8,7 @@
 #include <zephyr/sys/printk.h>
 
 #include "ethernet.h"
+#include "psram.h"
 #include "web_server.h"
 
 #define SLEEP_TIME_MS 500
@@ -18,6 +19,7 @@ int main(void)
 {
 	LOG_INF("Application version: %s", APP_VERSION_STRING);
 
+	psram_service_init();
 	ethernet_service_init();
 	web_server_service_init();
 
