@@ -60,7 +60,14 @@ curl http://<board-ip>/api/status
 Example response:
 
 ```json
-{"status":"ok","uptime_ms":12345}
+{"status":"ok","version":"0.1.0","uptime_ms":12345}
+```
+
+The application version is defined in `VERSION`. It is also printed on the
+UART log during startup:
+
+```text
+<inf> app: Application version: 0.1.0
 ```
 
 Send a request body and receive it back with POST:

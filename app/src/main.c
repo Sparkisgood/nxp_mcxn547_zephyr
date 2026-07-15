@@ -3,6 +3,8 @@
  */
 
 #include <zephyr/kernel.h>
+#include <zephyr/app_version.h>
+#include <zephyr/logging/log.h>
 #include <zephyr/sys/printk.h>
 
 #include "ethernet.h"
@@ -10,8 +12,12 @@
 
 #define SLEEP_TIME_MS 500
 
+LOG_MODULE_REGISTER(app, LOG_LEVEL_INF);
+
 int main(void)
 {
+	LOG_INF("Application version: %s", APP_VERSION_STRING);
+
 	ethernet_service_init();
 	web_server_service_init();
 

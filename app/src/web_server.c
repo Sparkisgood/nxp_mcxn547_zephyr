@@ -8,6 +8,7 @@
 #include <stdio.h>
 
 #include <zephyr/kernel.h>
+#include <zephyr/app_version.h>
 #include <zephyr/net/http/server.h>
 #include <zephyr/net/http/service.h>
 #include <zephyr/sys/printk.h>
@@ -26,7 +27,7 @@ static int status_get_handler(struct http_client_ctx *client,
 			      struct http_response_ctx *response_ctx,
 			      void *user_data)
 {
-	static uint8_t response[80];
+	static uint8_t response[96];
 	int len;
 
 	ARG_UNUSED(client);
@@ -38,8 +39,9 @@ static int status_get_handler(struct http_client_ctx *client,
 	}
 
 	len = snprintf(response, sizeof(response),
-		       "{\"status\":\"ok\",\"uptime_ms\":%" PRId64 "}\n",
-		       k_uptime_get());
+		       "{\"status\":\"ok\",\"version\":\"%s\","
+		       "\"uptime_ms\":%" PRId64 "}\n",
+		       APP_VERSION_STRING, k_uptime_get());
 	if (len < 0) {
 		return len;
 	}
