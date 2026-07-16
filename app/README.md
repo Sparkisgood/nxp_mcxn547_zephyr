@@ -104,6 +104,26 @@ stress tests overwrite the selected PSRAM range.
 uart:~$ psram stress 65536 0
 ```
 
+## QSPI NOR flash
+
+The 8 MiB W25Q64JV is connected to FlexSPI0 Port A1. Zephyr's native FlexSPI
+NOR driver provides erase, write, read, and JEDEC-ID operations. Inspect it or
+read up to 256 bytes without changing flash contents:
+
+```text
+uart:~$ qspi info
+uart:~$ qspi read 0 64
+```
+
+The test command erases a complete 4 KiB sector, writes a 256-byte pattern,
+reads it back, and compares it. It defaults to the final sector at `0x7FF000`;
+do not use that sector for persistent data when running this test:
+
+```text
+uart:~$ qspi test
+uart:~$ qspi test 0x5a 0x7ff000
+```
+
 ## PMI firmware update over Ethernet
 
 The firmware-update service follows the reference `cgi_upload_image()` and

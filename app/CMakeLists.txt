@@ -9,6 +9,7 @@ target_sources(app PRIVATE
     src/ethernet.c
     src/pmi_update.c
     src/psram.c
+    src/qspi_nor.c
     src/web_server.c
 )
 

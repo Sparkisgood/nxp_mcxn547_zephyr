@@ -11,6 +11,7 @@
 #include "ethernet.h"
 #include "pmi_update.h"
 #include "psram.h"
+#include "qspi_nor.h"
 #include "web_server.h"
 
 #define SLEEP_TIME_MS 500
@@ -23,6 +24,7 @@ int main(void)
 
 	device_control_service_init();
 	psram_service_init();
+	qspi_nor_service_init();
 	pmi_update_service_init();
 	ethernet_service_init();
 	web_server_service_init();
