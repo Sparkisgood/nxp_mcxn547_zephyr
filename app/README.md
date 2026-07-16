@@ -135,6 +135,19 @@ Query progress until the response reports `"status":"ready"`,
 curl http://<board-ip>/pmi/update
 ```
 
+After sourcing `flex_env.sh`, the complete upload, update request, and status
+polling sequence can also be run with one command. The board IP defaults to
+`192.168.10.101`, and the image defaults to the signed sysbuild output:
+
+```bash
+flex_pmi_update_test
+flex_pmi_update_test 192.168.10.101
+flex_pmi_update_test 192.168.10.101 /path/to/zephyr.signed.bin
+```
+
+Set `PMI_BOARD_IP` to change the default address. The helper does not reboot
+the board automatically.
+
 Reset the board to let MCUboot test the new image. After the new application
 reaches firmware-update service initialization, it confirms the running image
 so MCUboot will not revert it on the following reset. The HTTP service is
