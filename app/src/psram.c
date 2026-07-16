@@ -87,10 +87,83 @@ static int psram_read_id(void)
 
 static int psram_check_range(uint32_t offset, size_t length)
 {
-	if (length == 0 || length > PSRAM_BUFFER_SIZE ||
+	if (length == 0 ||
 	    offset >= PSRAM_SIZE || length > PSRAM_SIZE - offset) {
 		return -EINVAL;
 	}
+
+	return 0;
+}
+
+bool psram_is_ready(void)
+{
+	return psram_ready;
+}
+
+size_t psram_get_size(void)
+{
+	return PSRAM_SIZE;
+}
+
+int psram_write(uint32_t offset, const void *data, size_t length)
+{
+	const uint8_t *source = data;
+	int ret;
+
+	if (!psram_ready) {
+		return -ENODEV;
+	}
+	if (data == NULL || psram_check_range(offset, length) != 0) {
+		return -EINVAL;
+	}
+
+	k_mutex_lock(&psram_lock, K_FOREVER);
+	for (size_t written = 0; written < length;) {
+		size_t chunk = MIN((size_t)PSRAM_BUFFER_SIZE - 4U, length - written);
+		size_t transfer_length = ROUND_UP(chunk, sizeof(uint32_t));
+
+		memset(write_buffer, 0xff, transfer_length);
+		memcpy(write_buffer, source + written, chunk);
+		ret = psram_transfer(offset + written, write_buffer, transfer_length,
+				     kFLEXSPI_Write, PSRAM_QUAD_WRITE);
+		if (ret != 0) {
+			k_mutex_unlock(&psram_lock);
+			return ret;
+		}
+		written += chunk;
+	}
+	k_mutex_unlock(&psram_lock);
+
+	return 0;
+}
+
+int psram_read(uint32_t offset, void *data, size_t length)
+{
+	uint8_t *destination = data;
+	int ret;
+
+	if (!psram_ready) {
+		return -ENODEV;
+	}
+	if (data == NULL || psram_check_range(offset, length) != 0) {
+		return -EINVAL;
+	}
+
+	k_mutex_lock(&psram_lock, K_FOREVER);
+	for (size_t read = 0; read < length;) {
+		size_t chunk = MIN((size_t)PSRAM_BUFFER_SIZE - 4U, length - read);
+		size_t transfer_length = ROUND_UP(chunk, sizeof(uint32_t));
+
+		ret = psram_transfer(offset + read, read_buffer, transfer_length,
+				     kFLEXSPI_Read, PSRAM_QUAD_READ);
+		if (ret != 0) {
+			k_mutex_unlock(&psram_lock);
+			return ret;
+		}
+		memcpy(destination + read, read_buffer, chunk);
+		read += chunk;
+	}
+	k_mutex_unlock(&psram_lock);
 
 	return 0;
 }

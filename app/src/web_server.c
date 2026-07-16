@@ -111,6 +111,8 @@ int web_server_service_init(void)
 	printk("HTTP server listening on port %u\n", http_port);
 	printk("  GET  /api/status\n");
 	printk("  POST /api/echo\n");
+	printk("  POST /pmi/image\n");
+	printk("  GET/POST /pmi/update\n");
 
 	return 0;
 }

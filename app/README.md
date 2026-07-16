@@ -103,3 +103,40 @@ stress tests overwrite the selected PSRAM range.
 ```text
 uart:~$ psram stress 65536 0
 ```
+
+## PMI firmware update over Ethernet
+
+The firmware-update service follows the reference `cgi_upload_image()` and
+`cgi_pmi_update()` flow. It stages an uploaded image in PSRAM, verifies its
+MCUboot header and CRC, copies it to the inactive slot, verifies the flash CRC,
+and requests an MCUboot test upgrade. It never writes the bootloader or active
+application partitions.
+
+Upload the signed MCUboot binary produced by sysbuild. Do not upload the plain
+`zephyr.bin` file:
+
+```bash
+curl -X POST --data-binary \
+  @build/app/app/zephyr/zephyr.signed.bin \
+  http://<board-ip>/pmi/image
+```
+
+A successful upload returns `"status":"ready"`. Start the background copy to
+MCUboot slot 1:
+
+```bash
+curl -X POST -d "action=update" http://<board-ip>/pmi/update
+```
+
+Query progress until the response reports `"status":"ready"`,
+`"percent":100`, and `"reboot_required":true`:
+
+```bash
+curl http://<board-ip>/pmi/update
+```
+
+Reset the board to let MCUboot test the new image. After the new application
+reaches firmware-update service initialization, it confirms the running image
+so MCUboot will not revert it on the following reset. The HTTP service is
+unencrypted and unauthenticated, so it is intended only for a trusted
+development network.

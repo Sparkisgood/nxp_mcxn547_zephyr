@@ -6,6 +6,7 @@ project(edison)
 target_sources(app PRIVATE
     src/main.c
     src/ethernet.c
+    src/pmi_update.c
     src/psram.c
     src/web_server.c
 )
