@@ -36,3 +36,13 @@
 	pinctrl-0 = <&pinmux_flexspi_flash_psram>;
 	pinctrl-names = "default";
 };
+
+/*
+ * The Edison PMI uses a KSZ8081 PHY. PIO0_23 drives an inverting NMOS reset
+ * circuit, so a low GPIO level releases the active-low PHYRST_B signal.
+ */
+&phy {
+	compatible = "microchip,ksz8081";
+	microchip,interface-type = "rmii";
+	reset-gpios = <&gpio0 23 GPIO_ACTIVE_LOW>;
+};
