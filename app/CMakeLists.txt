@@ -5,6 +5,7 @@ project(edison)
 
 target_sources(app PRIVATE
     src/device_control.c
+    src/eeprom.c
     src/main.c
     src/ethernet.c
     src/pmi_update.c

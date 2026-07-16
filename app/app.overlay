@@ -3,6 +3,18 @@
  * PIO2_2 is CS, PIO2_3 is CLK, and PIO2_4..7 are DATA0..3.
  */
 &pinctrl {
+	pinmux_flexcomm0_lpspi: pinmux_flexcomm0_lpspi {
+		group0 {
+			pinmux = <FC0_P0_PIO0_16>,
+				 <FC0_P1_PIO0_17>,
+				 <FC0_P2_PIO0_18>,
+				 <FC0_P3_PIO0_19>;
+			input-enable;
+			slew-rate = "fast";
+			drive-strength = "low";
+		};
+	};
+
 	pinmux_flexspi_flash_psram: pinmux_flexspi_flash_psram {
 		group0 {
 			pinmux = <FLEXSPI0_A_SS0_b_PIO3_0>,
@@ -28,6 +40,26 @@
 			drive-strength = "low";
 			bias-pull-up;
 		};
+	};
+};
+
+&flexcomm0 {
+	status = "okay";
+};
+
+&flexcomm0_lpspi0 {
+	status = "okay";
+	pinctrl-0 = <&pinmux_flexcomm0_lpspi>;
+	pinctrl-names = "default";
+
+	spi_eeprom: eeprom@0 {
+		compatible = "microchip,25cs640", "atmel,at25";
+		reg = <0>;
+		size = <8192>;
+		pagesize = <32>;
+		address-width = <16>;
+		spi-max-frequency = <1000000>;
+		timeout = <10>;
 	};
 };
 

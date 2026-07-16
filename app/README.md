@@ -124,6 +124,25 @@ uart:~$ qspi test
 uart:~$ qspi test 0x5a 0x7ff000
 ```
 
+## SPI EEPROM
+
+The 8 KiB SPI EEPROM is connected to LPSPI0 at 1 MHz and uses 32-byte pages.
+Inspect the device or read one page without modifying it:
+
+```text
+uart:~$ eeprom info
+uart:~$ eeprom read 0x1000 32
+```
+
+The test overwrites one page and verifies it. It defaults to address `0x1000`,
+matching the reference firmware test; do not store persistent data in the test
+page:
+
+```text
+uart:~$ eeprom test
+uart:~$ eeprom test 0x5a 0x1000
+```
+
 ## PMI firmware update over Ethernet
 
 The firmware-update service follows the reference `cgi_upload_image()` and
