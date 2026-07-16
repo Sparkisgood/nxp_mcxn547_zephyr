@@ -48,3 +48,107 @@ flex_flash_image
 
 `west flash` reads `build/app/domains.yaml` and flashes MCUboot before the
 application. Do not edit generated build files or `domains.yaml` manually.
+
+## Coding style
+
+All new or modified code must follow the Zephyr coding-style guidelines. Keep
+the style of nearby code when a rule is not explicitly covered, and do not mix
+unrelated formatting changes into a feature or bug-fix commit.
+
+### C source and headers
+
+- Indent with tabs, with a tab width of 8 characters. Use spaces only for
+  alignment where appropriate.
+- Keep lines at 100 columns or fewer.
+- Use `snake_case` for functions and variables. Use uppercase `SNAKE_CASE` for
+  macros and compile-time constants.
+- Put braces around every `if`, `else`, `for`, `while`, `do`, and `switch`
+  body, including one-line bodies.
+- Use `/* comment */` instead of `// comment`. Use `/** ... */` only for API
+  documentation that should be processed by Doxygen.
+- Keep declarations close to their use, initialize variables, make internal
+  functions and data `static`, and use `const` wherever possible.
+- Use Zephyr types, helpers, and APIs rather than adding local equivalents.
+  Prefer helpers such as `ARRAY_SIZE()`, `BIT()`, `MIN()`, and `MAX()` over
+  open-coded implementations.
+- Return standard negative error values such as `-EINVAL`, `-ENODEV`, and
+  `-EIO`. Check and propagate errors from Zephyr and driver APIs.
+- Use the logging subsystem (`LOG_INF()`, `LOG_WRN()`, and `LOG_ERR()`) for
+  runtime diagnostics. Do not add unconditional `printk()` calls to production
+  paths.
+- Public headers require include guards. Keep private declarations in the
+  module's source file or private header.
+
+Example:
+
+```c
+static int device_read(const struct device *dev, uint8_t *buffer, size_t length)
+{
+	int ret;
+
+	if (dev == NULL || buffer == NULL || length == 0U) {
+		return -EINVAL;
+	}
+
+	ret = driver_read(dev, buffer, length);
+	if (ret < 0) {
+		LOG_ERR("Read failed (%d)", ret);
+		return ret;
+	}
+
+	return 0;
+}
+```
+
+### Devicetree, Kconfig, and CMake
+
+- Describe hardware in devicetree overlays rather than hard-coding controller
+  addresses or pins in C. Use lowercase node names and labels, with hyphens in
+  property names.
+- Add user-selectable functionality through Kconfig. Prefix application-owned
+  symbols with `APP_` and provide useful help text.
+- Keep `prj.conf` grouped by subsystem and explain settings whose purpose is
+  not obvious.
+- List sources explicitly in `CMakeLists.txt`; do not use wildcard source-file
+  discovery.
+- Do not edit files under `build/`, generated headers, `domains.yaml`, Zephyr,
+  MCUboot, or SDK sources to implement an application feature.
+
+### Module organization
+
+Keep each feature in its own `.c` and `.h` files, as done for Ethernet, HTTP,
+and PSRAM. `main.c` should coordinate service initialization and the main loop;
+hardware access and feature logic belong in their respective modules. Protect
+shared peripheral state using the appropriate Zephyr synchronization object.
+
+### Before committing
+
+Format changed C files using the Zephyr workspace configuration:
+
+```bash
+clang-format --style=file:"$ZEPHYR_BASE/.clang-format" -i \
+  app/src/changed_file.c app/src/changed_file.h
+```
+
+Review staged C-style issues with Zephyr's `checkpatch` tool:
+
+```bash
+git diff --cached | "$ZEPHYR_BASE/scripts/checkpatch.pl" -
+```
+
+Finally, check whitespace and build the complete MCUboot/application image:
+
+```bash
+git diff --check
+source ./flex_env.sh
+flex_build_n547
+```
+
+Warnings must be understood and documented; new compiler errors or warnings
+must not be committed. Use focused commit subjects such as:
+
+```text
+feat(psram): add FlexSPI read and write tests
+fix(http): validate POST request body length
+docs(readme): document Zephyr coding style
+```
