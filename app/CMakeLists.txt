@@ -4,6 +4,7 @@ find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
 project(edison)
 
 target_sources(app PRIVATE
+    src/device_control.c
     src/main.c
     src/ethernet.c
     src/pmi_update.c

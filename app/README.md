@@ -140,3 +140,28 @@ reaches firmware-update service initialization, it confirms the running image
 so MCUboot will not revert it on the following reset. The HTTP service is
 unencrypted and unauthenticated, so it is intended only for a trusted
 development network.
+
+## Device reboot
+
+Schedule a cold reboot from the UART shell. The short delay allows the shell
+message to be transmitted before the system resets:
+
+```text
+uart:~$ pmi reboot
+Cold reboot scheduled in 500 ms
+```
+
+Zephyr's standard `kernel reboot cold` shell command is also enabled.
+
+The same operation is available through HTTP POST. The server sends its JSON
+response before the delayed reboot occurs:
+
+```bash
+curl -X POST http://<board-ip>/pmi/reboot
+```
+
+Example response:
+
+```json
+{"status":"ok","action":"reboot","delay_ms":500}
+```

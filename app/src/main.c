@@ -7,6 +7,7 @@
 #include <zephyr/logging/log.h>
 #include <zephyr/sys/printk.h>
 
+#include "device_control.h"
 #include "ethernet.h"
 #include "pmi_update.h"
 #include "psram.h"
@@ -20,6 +21,7 @@ int main(void)
 {
 	LOG_INF("Application version: %s", APP_VERSION_STRING);
 
+	device_control_service_init();
 	psram_service_init();
 	pmi_update_service_init();
 	ethernet_service_init();
