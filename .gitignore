@@ -4,6 +4,7 @@
 # Zephyr build and local environment
 build/
 build-*/
+release/
 .cache/
 .venv/
 twister-out*/

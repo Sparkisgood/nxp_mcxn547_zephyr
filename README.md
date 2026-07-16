@@ -49,6 +49,26 @@ flex_flash_image
 `west flash` reads `build/app/domains.yaml` and flashes MCUboot before the
 application. Do not edit generated build files or `domains.yaml` manually.
 
+## Release package
+
+Create a versioned release directory containing a combined full-flash image,
+the signed PMI update image, and release instructions:
+
+```bash
+./tools/flex_release.sh
+```
+
+The helper reads the version from `app/VERSION` and rebuilds the sysbuild
+application by default. To package existing build outputs without rebuilding:
+
+```bash
+./tools/flex_release.sh --no-build
+```
+
+Output is written under `release/edison_pmi_v<version>/`. For example, version
+`0.1.0-rc1` produces `edison_pmi_full_v0.1.0-rc1.bin` and
+`edison_pmi_update_v0.1.0-rc1.bin`.
+
 ## Coding style
 
 All new or modified code must follow the Zephyr coding-style guidelines. Keep
