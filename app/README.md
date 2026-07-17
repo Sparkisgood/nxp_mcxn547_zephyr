@@ -170,6 +170,28 @@ The command accepts standard or 29-bit extended CAN IDs and payloads up to 512
 bytes. For compatibility with the reference CGI, a valid single-frame PCI byte
 at the start of `TX` is accepted and removed. Requests time out after 5 seconds.
 
+### Raw CAN loop test
+
+The raw loop test follows the reference `CAN_loop_test` flow. It sends exactly
+eight bytes, waits for a frame with the same CAN ID, and passes only when all
+eight returned bytes match. The CAN network must include a device or fixture
+that echoes the frame; this command does not enable controller-internal
+loopback.
+
+Console test:
+
+```text
+uart:~$ canloop test 0x123 "01 02 03 04 05 06 07 08"
+```
+
+Ethernet test using the reference field names (including `CAND_ID`):
+
+```bash
+curl -X POST \
+  -d "CAN_loop_test=on&CAND_ID=0x123&TX=0102030405060708" \
+  http://<board-ip>/pmi/test
+```
+
 ## PMI firmware update over Ethernet
 
 The firmware-update service follows the reference `cgi_upload_image()` and

@@ -33,6 +33,9 @@ static const struct gpio_dt_spec can_active =
 	GPIO_DT_SPEC_GET(DT_PATH(zephyr_user), can_active_gpios);
 static bool service_ready;
 K_MUTEX_DEFINE(transaction_lock);
+K_SEM_DEFINE(raw_rx_sem, 0, 1);
+static uint8_t raw_rx_data[CAN_MAX_DLEN];
+static size_t raw_rx_len;
 
 static int parse_u32(const char *text, uint32_t *value)
 {
@@ -112,6 +115,69 @@ static struct isotp_msg_id make_address(uint32_t id)
 		address.std_id = id;
 	}
 	return address;
+}
+
+static void raw_rx_callback(const struct device *dev, struct can_frame *frame,
+			    void *user_data)
+{
+	ARG_UNUSED(dev);
+	ARG_UNUSED(user_data);
+
+	raw_rx_len = MIN(can_dlc_to_bytes(frame->dlc), sizeof(raw_rx_data));
+	memcpy(raw_rx_data, frame->data, raw_rx_len);
+	k_sem_give(&raw_rx_sem);
+}
+
+static int raw_can_loop(uint32_t can_id, const uint8_t *tx_data,
+			uint8_t *rx_data, uint32_t timeout_ms)
+{
+	struct can_filter filter = {
+		.id = can_id,
+		.mask = can_id > CAN_STD_ID_MASK ? CAN_EXT_ID_MASK : CAN_STD_ID_MASK,
+	};
+	struct can_frame frame = {
+		.id = can_id,
+		.dlc = can_bytes_to_dlc(8U),
+	};
+	int filter_id;
+	int ret;
+
+	if (!service_ready) {
+		return -ENODEV;
+	}
+	if (can_id > CAN_EXT_ID_MASK || timeout_ms == 0U) {
+		return -EINVAL;
+	}
+	if (can_id > CAN_STD_ID_MASK) {
+		filter.flags = CAN_FILTER_IDE;
+		frame.flags = CAN_FRAME_IDE;
+	}
+	memcpy(frame.data, tx_data, 8U);
+
+	k_mutex_lock(&transaction_lock, K_FOREVER);
+	raw_rx_len = 0;
+	k_sem_reset(&raw_rx_sem);
+	filter_id = can_add_rx_filter(can_dev, raw_rx_callback, NULL, &filter);
+	if (filter_id < 0) {
+		ret = filter_id;
+		goto out;
+	}
+
+	ret = can_send(can_dev, &frame, K_MSEC(timeout_ms), NULL, NULL);
+	if (ret == 0) {
+		ret = k_sem_take(&raw_rx_sem, K_MSEC(timeout_ms));
+	}
+	can_remove_rx_filter(can_dev, filter_id);
+	if (ret == 0) {
+		memcpy(rx_data, raw_rx_data, raw_rx_len);
+		if (raw_rx_len != 8U || memcmp(tx_data, raw_rx_data, 8U) != 0) {
+			ret = -EIO;
+		}
+	}
+
+out:
+	k_mutex_unlock(&transaction_lock);
+	return ret;
 }
 
 static int isotp_request(uint32_t tx_id, uint32_t rx_id,
@@ -206,6 +272,34 @@ static int cmd_isotp_test(const struct shell *sh, size_t argc, char **argv)
 	return 0;
 }
 
+static int cmd_can_loop_test(const struct shell *sh, size_t argc, char **argv)
+{
+	uint8_t tx_data[8];
+	uint8_t rx_data[8];
+	uint32_t can_id;
+	uint32_t timeout_ms = ISOTP_DEFAULT_TIMEOUT_MS;
+	size_t tx_len;
+	int ret;
+
+	if (parse_u32(argv[1], &can_id) != 0 ||
+	    parse_payload(argv[2], tx_data, sizeof(tx_data), &tx_len) != 0 ||
+	    tx_len != sizeof(tx_data) ||
+	    (argc > 3 && parse_u32(argv[3], &timeout_ms) != 0) || timeout_ms == 0U) {
+		shell_error(sh, "provide a CAN ID and exactly 8 data bytes");
+		return -EINVAL;
+	}
+
+	print_hex(sh, "TX: ", tx_data, sizeof(tx_data));
+	ret = raw_can_loop(can_id, tx_data, rx_data, timeout_ms);
+	if (ret != 0) {
+		shell_error(sh, "raw CAN loop test failed (%d)", ret);
+		return ret;
+	}
+	print_hex(sh, "RX: ", rx_data, sizeof(rx_data));
+	shell_print(sh, "PASS: raw CAN frame matched");
+	return 0;
+}
+
 SHELL_STATIC_SUBCMD_SET_CREATE(isotp_commands,
 	SHELL_CMD(info, NULL, "Show ISO-TP and CAN state.", cmd_isotp_info),
 	SHELL_CMD_ARG(test, NULL,
@@ -214,6 +308,14 @@ SHELL_STATIC_SUBCMD_SET_CREATE(isotp_commands,
 	SHELL_SUBCMD_SET_END
 );
 SHELL_CMD_REGISTER(isotp, &isotp_commands, "ISO-TP UDS test commands.", NULL);
+
+SHELL_STATIC_SUBCMD_SET_CREATE(canloop_commands,
+	SHELL_CMD_ARG(test, NULL,
+		      "Send and verify <can_id> <8-byte_hex_payload> [timeout_ms=5000].",
+		      cmd_can_loop_test, 3, 1),
+	SHELL_SUBCMD_SET_END
+);
+SHELL_CMD_REGISTER(canloop, &canloop_commands, "Raw CAN loop test commands.", NULL);
 
 static int url_decode(char *text)
 {
@@ -306,6 +408,30 @@ static int json_response(char *buffer, size_t capacity, enum http_status *status
 	return (int)(offset + (size_t)length);
 }
 
+static int raw_json_response(char *buffer, size_t capacity,
+			     enum http_status *status, uint32_t can_id,
+			     const uint8_t *tx, const uint8_t *rx, int result)
+{
+	int length;
+
+	length = snprintf(buffer, capacity,
+			  "{\"status\":\"%s\",\"can_id\":\"0x%" PRIX32
+			  "\",\"tx\":\"%02X %02X %02X %02X %02X %02X %02X %02X\","
+			  "\"rx\":\"%02X %02X %02X %02X %02X %02X %02X %02X\","
+			  "\"result\":%d}\n",
+			  result == 0 ? "pass" : "fail", can_id,
+			  tx[0], tx[1], tx[2], tx[3], tx[4], tx[5], tx[6], tx[7],
+			  rx[0], rx[1], rx[2], rx[3], rx[4], rx[5], rx[6], rx[7],
+			  result);
+	if (length < 0 || (size_t)length >= capacity) {
+		return -ENOSPC;
+	}
+	*status = result == 0 ? HTTP_200_OK :
+		  (result == -EINVAL ? HTTP_400_BAD_REQUEST :
+		   (result == -EIO ? HTTP_409_CONFLICT : HTTP_504_GATEWAY_TIMEOUT));
+	return length;
+}
+
 static int isotp_post_handler(struct http_client_ctx *client,
 			      enum http_data_status data_status,
 			      const struct http_request_ctx *request,
@@ -321,6 +447,7 @@ static int isotp_post_handler(struct http_client_ctx *client,
 	uint32_t rx_id = 0;
 	char tx_id_text[16];
 	char rx_id_text[16];
+	char mode[8];
 	size_t tx_len = 0;
 	int result = -EINVAL;
 	int response_len;
@@ -346,7 +473,19 @@ static int isotp_post_handler(struct http_client_ctx *client,
 	body[body_len] = '\0';
 	body_len = 0;
 
-	if (form_value(body, "CAN_TX_ID", tx_id_text, sizeof(tx_id_text)) == 0 &&
+	memset(tx_data, 0, sizeof(tx_data));
+	memset(rx_data, 0, sizeof(rx_data));
+	if (form_value(body, "CAN_loop_test", mode, sizeof(mode)) == 0 &&
+	    strcmp(mode, "on") == 0 &&
+	    form_value(body, "CAND_ID", tx_id_text, sizeof(tx_id_text)) == 0 &&
+	    form_value(body, "TX", payload_text, sizeof(payload_text)) == 0 &&
+	    parse_u32(tx_id_text, &tx_id) == 0 &&
+	    parse_payload(payload_text, tx_data, 8U, &tx_len) == 0 && tx_len == 8U) {
+		result = raw_can_loop(tx_id, tx_data, rx_data, ISOTP_DEFAULT_TIMEOUT_MS);
+		response_len = raw_json_response(response_body, sizeof(response_body),
+					     &response->status, tx_id, tx_data,
+					     rx_data, result);
+	} else if (form_value(body, "CAN_TX_ID", tx_id_text, sizeof(tx_id_text)) == 0 &&
 	    form_value(body, "CAN_RX_ID", rx_id_text, sizeof(rx_id_text)) == 0 &&
 	    form_value(body, "TX", payload_text, sizeof(payload_text)) == 0 &&
 	    parse_u32(tx_id_text, &tx_id) == 0 && parse_u32(rx_id_text, &rx_id) == 0 &&
@@ -354,10 +493,14 @@ static int isotp_post_handler(struct http_client_ctx *client,
 		strip_single_frame_pci(tx_data, &tx_len);
 		result = isotp_request(tx_id, rx_id, tx_data, tx_len, rx_data,
 				       sizeof(rx_data), ISOTP_DEFAULT_TIMEOUT_MS);
+		response_len = json_response(response_body, sizeof(response_body),
+					     &response->status, tx_id, rx_id,
+					     tx_data, tx_len, rx_data, result);
+	} else {
+		response_len = json_response(response_body, sizeof(response_body),
+					     &response->status, tx_id, rx_id,
+					     tx_data, tx_len, rx_data, result);
 	}
-
-	response_len = json_response(response_body, sizeof(response_body), &response->status,
-				     tx_id, rx_id, tx_data, tx_len, rx_data, result);
 	if (response_len < 0) {
 		return response_len;
 	}
