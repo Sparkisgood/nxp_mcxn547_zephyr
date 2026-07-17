@@ -7,6 +7,7 @@ target_sources(app PRIVATE
     src/device_control.c
     src/eeprom.c
     src/main.c
+    src/isotp_service.c
     src/ethernet.c
     src/pmi_update.c
     src/psram.c

@@ -114,6 +114,7 @@ int web_server_service_init(void)
 	printk("  POST /pmi/image\n");
 	printk("  GET/POST /pmi/update\n");
 	printk("  POST /pmi/reboot\n");
+	printk("  POST /pmi/test (ISO-TP UDS)\n");
 
 	return 0;
 }

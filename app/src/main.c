@@ -10,6 +10,7 @@
 #include "device_control.h"
 #include "eeprom.h"
 #include "ethernet.h"
+#include "isotp_service.h"
 #include "pmi_update.h"
 #include "psram.h"
 #include "qspi_nor.h"
@@ -27,6 +28,7 @@ int main(void)
 	eeprom_service_init();
 	psram_service_init();
 	qspi_nor_service_init();
+	isotp_service_init();
 	pmi_update_service_init();
 	ethernet_service_init();
 	web_server_service_init();
